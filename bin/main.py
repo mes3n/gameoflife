@@ -4,55 +4,47 @@ import random
 
 
 class Tile:
-    def __init__(self, x, y, live, batch):
+    def __init__(self, x, y, w, h, live, batch):
         self.x, self.y = x, y
         self.live = live
 
         self.neighbors: list[Tile] = []
 
-        self.shape = pyglet.shapes.Rectangle(x * 9, y * 9, 9, 9, batch=batch)
+        self.shape = pyglet.shapes.Rectangle(x * w, y * h, w, h, batch=batch)
         self.set_color()
     
     def set_color(self):
         self.shape.color = (255,)*3 if self.live else (0,)*3
 
-    def population(self):
-        count = 0
-        for t in self.neighbors:
-            if t.live:
-                count += 1
-        return count
-
 
 class Grid:
-    def __init__(self, width, height, batch):
+    def __init__(self, width, height, tw, th, batch):
         self.width, self.height = width, height
 
         self.shape = batch
 
-        self.grid: list[list[Tile]] = [[Tile(x, y, bool(random.getrandbits(1)), batch) for x in range(self.width)] for y in range(self.height)]
+        self.grid: list[list[Tile]] = [[Tile(x, y, tw, th, bool(random.getrandbits(1)), batch) 
+            for x in range(self.width)] for y in range(self.height)]
 
         for y, row in enumerate(self.grid):
             for x, tile in enumerate(row):
-                if x == 0 or y == 0 or x == width - 1 or y == width - 1:
-                    pass
-                else:
-                    tile.neighbors = [
-                        self.grid[y - 1][x - 1],
-                        self.grid[y - 1][x],
-                        self.grid[y - 1][x + 1],
-                        row[x - 1],
-                        row[x + 1],
-                        self.grid[y + 1][x - 1],
-                        self.grid[y + 1][x],
-                        self.grid[y + 1][x + 1],
-                    ]
+                tile.neighbors = [
+                    self.grid[y - 1][x - 1] if y - 1 > 0 and x - 1 > 0 else None,
+                    self.grid[y - 1][x]     if y - 1 > 0 else None,
+                    self.grid[y - 1][x + 1] if y - 1 > 0 and x + 1 < self.width else None,
+                    row[x - 1]              if x - 1 > 0 else None,
+                    row[x + 1]              if x + 1 < self.width else None,
+                    self.grid[y + 1][x - 1] if y + 1 < self.height and x - 1 > 0 else None,
+                    self.grid[y + 1][x]     if y + 1 < self.height else None,
+                    self.grid[y + 1][x + 1] if y + 1 < self.height and x + 1 < self.width else None,
+                ]
+                tile.neighbors = [t for t in tile.neighbors if t != None]
 
     def step(self, *args):
         states = []
         for row in self.grid:
             for tile in row:
-                population = tile.population()
+                population = [t.live for t in tile.neighbors].count(True)
                 if population < 2 or 3 < population:
                     states.append(False)
                 elif tile.live:
@@ -87,19 +79,13 @@ class Window(pyglet.window.Window):
         if symbol == pyglet.window.key.ESCAPE:
             self.close()
         elif symbol == pyglet.window.key.SPACE:
-            self.stepping = True
-
-    def on_key_release(self, symbol, modifiers):
-        if symbol == pyglet.window.key.SPACE:
-            self.stepping = False
-
+            self.stepping = not self.stepping
 
     def on_draw(self):
         if self.stepping:
             self.grid.step()
 
         self.clear()
-
         self.grid.shape.draw()
 
     def start(self):
@@ -111,9 +97,8 @@ def main():
 
     batch = pyglet.graphics.Batch()
 
-    grid = Grid(100, 100, batch)
+    grid = Grid(150, 150, 6, 6, batch)
     window.track(grid)
-    # pyglet.clock.schedule_interval(grid.step, 0.2)
 
     window.start()
 
