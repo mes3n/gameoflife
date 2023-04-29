@@ -20,6 +20,7 @@ class Tile:
 class Grid:
     def __init__(self, width, height, tw, th, batch):
         self.width, self.height = width, height
+        self.tw, self.th = tw, th
 
         self.shape = batch
 
@@ -59,7 +60,28 @@ class Grid:
                 tile.live = states[y*self.width + x]
                 tile.set_color()
 
-                
+    def kill(self):
+        for row in self.grid:
+            for tile in row:
+                tile.live = False
+                tile.set_color()
+
+    def seed(self):
+        for row in self.grid:
+            for tile in row:
+                tile.live = bool(random.getrandbits(1))
+                tile.set_color()
+
+    def toggle_live(self, x, y, live):
+        x, y = x // self.tw, y // self.th
+
+        if not (0 <= x < self.width and 0 <= y < self.height):
+            return
+
+        tile = self.grid[y][x]
+        tile.live = live
+        tile.set_color()
+
     def get_size(self) -> tuple[int, int]:
         return self.width, self.height
 
@@ -80,6 +102,16 @@ class Window(pyglet.window.Window):
             self.close()
         elif symbol == pyglet.window.key.SPACE:
             self.stepping = not self.stepping
+        elif symbol == pyglet.window.key.C:
+            self.grid.kill()
+        elif symbol == pyglet.window.key.S:
+            self.grid.seed()
+
+    def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
+        self.grid.toggle_live(x, y, buttons == pyglet.window.mouse.LEFT)
+
+    def on_mouse_release(self, x, y, button, modifiers):
+        self.grid.toggle_live(x, y, button == pyglet.window.mouse.LEFT)
 
     def on_draw(self):
         if self.stepping:
@@ -97,7 +129,7 @@ def main():
 
     batch = pyglet.graphics.Batch()
 
-    grid = Grid(150, 150, 6, 6, batch)
+    grid = Grid(100, 100, 9, 9, batch)
     window.track(grid)
 
     window.start()

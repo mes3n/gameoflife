@@ -34,3 +34,7 @@ python bin/main.py
 | --- | --- |
 | Esc | Exit program |
 | Space | Toggle pause |
+| C | Clear board |
+| S | Generate random board |
+| Left mouse button | Draw living cells to board |
+| Any other mouse button | Remove living cells from board
